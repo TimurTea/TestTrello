@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:15
+    container_name: awesome_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 3228
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - CGO_ENABLED=0
+    container_name: awesome_go_app
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: postgres://admin:3228@db:5432/mydb?sslmode=disable
+
+  migrator:
+    image: migrate/migrate
+    depends_on:
+      - db
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: [
+      "migrate",
+      "-path", "/migrations",
+      "-database", "postgres://admin:3228@db:5432/mydb?sslmode=disable",
+      "up"
+    ]
+
+volumes:
+  pgdata:

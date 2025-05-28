@@ -7,6 +7,7 @@ import (
 	"awesomeProject2/cmd/service"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 )
@@ -15,8 +16,8 @@ func main() {
 	env := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.GetOrDefault("DB_HOST", "localhost"),
 		config.GetOrDefault("DB_PORT", "5432"),
-		config.GetOrDefault("DB_USER", "postgres"),
-		config.GetOrDefault("DB_PASSWORD", ""),
+		config.GetOrDefault("DB_USER", "admin"),
+		config.GetOrDefault("DB_PASSWORD", "3228"),
 		config.GetOrDefault("DB_NAME", "mydb"),
 		config.GetOrDefault("SSL_MODE", "disable"),
 	)
