@@ -51,16 +51,14 @@ type UpdateCardDTO struct {
 }
 
 type CreateCardDTO struct {
-	BoardID     int    `json:"board_id"`
 	ListID      int    `json:"list_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 type DeleteCardDTO struct {
-	BoardID int `json:"board_id"`
-	ListID  int `json:"list_id"`
-	CardID  int `json:"card_id"`
+	ListID int `json:"list_id"`
+	CardID int `json:"card_id"`
 }
 
 func CardToDTO(c model.Card) CardDTO {

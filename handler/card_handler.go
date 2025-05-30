@@ -24,7 +24,10 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		cards := h.service.GetCards(requestDTO.ID)
+		cards, err := h.service.GetCards(requestDTO.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		var cardDTOs []dto.CardDTO
 		for i := range cards {
 			cardDTOs = append(cardDTOs, dto.CardToDTO(cards[i]))
@@ -38,14 +41,21 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if input.BoardID == 0 || input.ListID == 0 {
-			http.Error(w, "board id or list id required", http.StatusBadRequest)
+		if input.ListID == 0 {
+			http.Error(w, "list id required", http.StatusBadRequest)
 		}
 		if len(input.Title) == 0 {
 			http.Error(w, "title is required", http.StatusBadRequest)
 			return
 		}
-		card := h.service.CreateCard(input.Title, input.BoardID, input.ListID, input.Description)
+		card, err := h.service.CreateCard(model.CardInputCreate{
+			ListID:      input.ListID,
+			Title:       input.Title,
+			Description: input.Description,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 		cardDTOs := dto.CardToDTO(card)
 		json.NewEncoder(w).Encode(cardDTOs)
 	} else if r.Method == http.MethodDelete {
@@ -53,16 +63,13 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		if input.BoardID == 0 {
-			http.Error(w, "board id required", http.StatusBadRequest)
-		}
 		if input.ListID == 0 {
 			http.Error(w, "list id required", http.StatusBadRequest)
 		}
 		if input.CardID == 0 {
 			http.Error(w, "card id required", http.StatusBadRequest)
 		}
-		deletedCard, err := h.service.DeleteCard(input.BoardID, input.ListID, input.CardID)
+		deletedCard, err := h.service.DeleteCard(input.ListID, input.CardID)
 		if err != nil {
 			http.Error(w, "Error deleting card", http.StatusInternalServerError)
 			return
@@ -76,10 +83,6 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 		var updatedCardDTO dto.UpdateCardDTO
 		if err := json.NewDecoder(r.Body).Decode(&updatedCardDTO); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if updatedCardDTO.BoardID == 0 {
-			http.Error(w, "board id error", http.StatusBadRequest)
 			return
 		}
 		if updatedCardDTO.ListID == 0 {

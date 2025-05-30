@@ -23,7 +23,11 @@ func (h *BoardHandler) HandleBoards(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		boards := h.service.GetBoards(requestDTO.ID)
+		boards, err := h.service.GetBoards()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		var boardDTOs []dto.BoardDTO
 		for _, b := range boards {
 			boardDTOs = append(boardDTOs, dto.BoardToDTO(b))
@@ -43,7 +47,10 @@ func (h *BoardHandler) HandleBoards(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "title is required", http.StatusBadRequest)
 			return
 		}
-		board := h.service.CreateBoard(input.Title)
+		board, err := h.service.CreateBoard(input.Title)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		dto := dto.BoardToDTO(board)
 		if err := json.NewEncoder(w).Encode(dto); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

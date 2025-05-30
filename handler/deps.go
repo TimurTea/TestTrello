@@ -3,16 +3,16 @@ package handler
 import "awesomeProject2/cmd/model"
 
 type BoardService interface {
-	GetBoards(boardID *int) []model.Board
-	CreateBoard(title string) model.Board
+	GetBoards() ([]model.Board, error)
+	CreateBoard(title string) (model.Board, error)
 }
 type ListService interface {
-	GetLists(boardID *int) []model.List
-	CreateList(title string, boardID int) model.List
+	GetLists(boardID *int) ([]model.List, error)
+	CreateList(input model.ListInputCreate) (model.List, error)
 }
 type CardService interface {
-	GetCards(boardID *int) []model.Card
-	CreateCard(title string, boardID int, listID int, description string) model.Card
-	DeleteCard(boardID int, listID int, cardID int) (model.Card, error)
+	GetCards(boardID *int) ([]model.Card, error)
+	CreateCard(input model.CardInputCreate) (model.Card, error)
+	DeleteCard(listID int, cardID int) (model.Card, error)
 	UpdateCard(updated model.Card) (model.Card, error)
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"awesomeProject2/cmd/dto"
+	"awesomeProject2/cmd/model"
 	"encoding/json"
 	"net/http"
 )
@@ -22,7 +23,10 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			lists := h.service.GetLists(requestDTO.ID)
+			lists, err := h.service.GetLists(requestDTO.ID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			var listDTOs []dto.ListDTO
 			for _, l := range lists {
 				listDTOs = append(listDTOs, dto.ListToDTO(l))
@@ -44,7 +48,13 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		list := h.service.CreateList(input.Title, input.BoardID)
+		list, err := h.service.CreateList(model.ListInputCreate{
+			BoardID: input.BoardID,
+			Title:   input.Title,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		dto := dto.ListToDTO(list)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(dto); err != nil {
