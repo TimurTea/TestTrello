@@ -1,13 +1,20 @@
 package service
 
-import "awesomeProject2/cmd/model"
+import (
+	"awesomeProject2/cmd/model"
+	"go.uber.org/zap"
+)
 
 type CardService struct {
 	storage CardStorage
+	logger  *zap.Logger
 }
 
-func NewCardService(storage CardStorage) *CardService {
-	return &CardService{storage: storage}
+func NewCardService(storage CardStorage, logger *zap.Logger) *CardService {
+	return &CardService{
+		storage: storage,
+		logger:  logger,
+	}
 }
 func (s CardService) GetCards(CardID *int) ([]model.Card, error) {
 	return s.storage.GetCards(CardID)
