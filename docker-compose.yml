@@ -23,7 +23,12 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_URL: postgres://admin:3228@db:5432/mydb?sslmode=disable
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: 3228
+      DB_NAME: mydb
+      SSL_MODE: disable
 
   migrator:
     image: migrate/migrate
