@@ -20,15 +20,6 @@ func NewBoardHandler(service BoardService, logger *zap.Logger) *BoardHandler {
 }
 func (h *BoardHandler) HandleBoards(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		var requestDTO dto.BoardDTO
-		if r.Body != nil {
-			defer r.Body.Close()
-			if err := json.NewDecoder(r.Body).Decode(&requestDTO); err != nil {
-				h.logger.Error("Ошибка декодирования запроса(GET)", zap.Error(err))
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
 		boards, err := h.service.GetBoards()
 		if err != nil {
 			h.logger.Error("Ошибка получение досок", zap.Error(err))
@@ -41,13 +32,13 @@ func (h *BoardHandler) HandleBoards(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(boardDTOs); err != nil {
-			h.logger.Error("Ошибка кодирования запроса(GET)", zap.Error(err))
+			h.logger.Error("Ошибка кодирования ответа(GET)", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	} else if r.Method == http.MethodPost {
 		var input dto.CreateBoardDTO
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			h.logger.Error("Ошибка декодирования запроса(POST)", zap.Error(err))
+			h.logger.Error("Ошибка декодирования запроса(POST)", zap.Error(err), zap.Any("input", input))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -58,13 +49,13 @@ func (h *BoardHandler) HandleBoards(w http.ResponseWriter, r *http.Request) {
 		}
 		board, err := h.service.CreateBoard(input.Title)
 		if err != nil {
-			h.logger.Error("Ошибка создания доски", zap.Error(err))
+			h.logger.Error("Ошибка создания доски", zap.Error(err), zap.Any("board", board))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		dto := dto.BoardToDTO(board)
 		if err := json.NewEncoder(w).Encode(dto); err != nil {
-			h.logger.Warn("Ошибка кодирования запроса(POST)", zap.Error(err))
+			h.logger.Warn("Ошибка кодирования запроса(POST)", zap.Error(err), zap.Any("dto", dto))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

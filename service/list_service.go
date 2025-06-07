@@ -6,19 +6,19 @@ import (
 )
 
 type ListService struct {
-	storage ListStorage
+	Storage ListStorage
 	logger  *zap.Logger
 }
 
 func NewListService(storage ListStorage, logger *zap.Logger) *ListService {
 	return &ListService{
-		storage: storage,
+		Storage: storage,
 		logger:  logger,
 	}
 }
 func (s ListService) GetLists(ListID *int) ([]model.List, error) {
-	return s.storage.GetLists(ListID)
+	return s.Storage.GetLists(ListID)
 }
 func (s ListService) CreateList(input model.ListInputCreate) (model.List, error) {
-	return s.storage.CreateList(input)
+	return s.Storage.CreateList(input)
 }

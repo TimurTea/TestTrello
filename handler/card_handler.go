@@ -25,14 +25,14 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 		if r.Body != nil {
 			defer r.Body.Close()
 			if err := json.NewDecoder(r.Body).Decode(&requestDTO); err != nil {
-				h.logger.Error("Ошибка декодирования запроса(GET)", zap.Error(err))
+				h.logger.Error("Ошибка декодирования запроса(GET)", zap.Error(err), zap.Any("requestDTO", requestDTO))
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
 		cards, err := h.service.GetCards(requestDTO.ID)
 		if err != nil {
-			h.logger.Error("Ошибка получения карточек", zap.Error(err))
+			h.logger.Error("Ошибка получения карточек", zap.Error(err), zap.Any("requestDTO", requestDTO))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -41,14 +41,14 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 			cardDTOs = append(cardDTOs, dto.CardToDTO(cards[i]))
 		}
 		if err := json.NewEncoder(w).Encode(cardDTOs); err != nil {
-			h.logger.Error("Ошибка при кодировании ответа", zap.Error(err))
+			h.logger.Error("Ошибка при кодировании ответа", zap.Error(err), zap.Any("requestDTO", requestDTO))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	} else if r.Method == http.MethodPost {
 		var input dto.CreateCardDTO
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			h.logger.Error("Ошибка декодирования запрос(POST)", zap.Error(err))
+			h.logger.Error("Ошибка декодирования запрос(POST)", zap.Error(err), zap.Any("requestDTO", input))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -68,14 +68,16 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 			Description: input.Description,
 		})
 		if err != nil {
+			h.logger.Error("Ошибка создание карточки", zap.Error(err), zap.Any("input", input))
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		cardDTOs := dto.CardToDTO(card)
 		json.NewEncoder(w).Encode(cardDTOs)
 	} else if r.Method == http.MethodDelete {
 		var input dto.DeleteCardDTO
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			h.logger.Error("Ошибка декодирования(DELETE)", zap.Error(err))
+			h.logger.Error("Ошибка декодирования(DELETE)", zap.Error(err), zap.Any("input", input))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -98,14 +100,14 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 		cardDTOs := dto.CardToDTO(deletedCard)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(cardDTOs); err != nil {
-			h.logger.Error("Ошибка кодирования запроса(DELETE)", zap.Error(err))
+			h.logger.Error("Ошибка кодирования запроса(DELETE)", zap.Error(err), zap.Any("cardDTOs", cardDTOs))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	} else if r.Method == http.MethodPut {
 		var updatedCardDTO dto.UpdateCardDTO
 		if err := json.NewDecoder(r.Body).Decode(&updatedCardDTO); err != nil {
-			h.logger.Error("Ошибка декодирования запроса(PUT)", zap.Error(err))
+			h.logger.Error("Ошибка декодирования запроса(PUT)", zap.Error(err), zap.Any("updatedCardDTO", updatedCardDTO))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -128,14 +130,14 @@ func (h *CardHandler) HandleCards(w http.ResponseWriter, r *http.Request) {
 		}
 		updatedCard, err := h.service.UpdateCard(updatedCard)
 		if err != nil {
-			h.logger.Error("Ошибка обновление карточки", zap.Error(err))
+			h.logger.Error("Ошибка обновление карточки", zap.Error(err), zap.Any("updatedCard", updatedCard))
 			http.Error(w, "Error updating card", http.StatusInternalServerError)
 			return
 		}
 		updatedCardDTOResponse := dto.CardToDTO(updatedCard)
 		json.NewEncoder(w).Encode(updatedCardDTOResponse)
 	} else {
-		h.logger.Warn("Метод не поддерживается", zap.String("method", r.Method))
+		h.logger.Warn("Метод не поддерживается", zap.Any("method", r.Method))
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
