@@ -2,11 +2,12 @@ package dto
 
 import (
 	"awesomeProject2/cmd/model"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestBoardToDTO(t *testing.T) {
-	ptr := 1
+	pointer := 1
 	tests := []struct {
 		name  string
 		board model.Board
@@ -15,11 +16,11 @@ func TestBoardToDTO(t *testing.T) {
 		{
 			name: "normal board",
 			board: model.Board{
-				ID:    1,
+				ID:    pointer,
 				Title: "Sprint 1",
 			},
 			want: BoardDTO{
-				ID:    &ptr,
+				ID:    &pointer,
 				Title: "Sprint 1",
 			},
 		},
@@ -28,15 +29,16 @@ func TestBoardToDTO(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := BoardToDTO(tt.board)
-			if got.ID == nil || *got.ID != *tt.want.ID || got.Title != tt.want.Title {
-				t.Errorf("BoardToDTO() = %+v, want %+v", got, tt.want)
-			}
+			require.NotNil(t, got.ID)
+			require.NotNil(t, tt.want)
+			require.Equal(t, *got.ID, *tt.want.ID)
+			require.Equal(t, tt.want.Title, got.Title)
 		})
 	}
 }
 
 func TestListToDTO(t *testing.T) {
-	ptr := 1
+	pointer := 1
 	tests := []struct {
 		name string
 		list model.List
@@ -50,7 +52,7 @@ func TestListToDTO(t *testing.T) {
 				BoardID: 10,
 			},
 			want: ListDTO{
-				ID:      &ptr,
+				ID:      &pointer,
 				Title:   "To Do",
 				BoardID: 10,
 			},
@@ -58,12 +60,12 @@ func TestListToDTO(t *testing.T) {
 		{
 			name: "empty title",
 			list: model.List{
-				ID:      1,
+				ID:      pointer,
 				Title:   "",
 				BoardID: 20,
 			},
 			want: ListDTO{
-				ID:      &ptr,
+				ID:      &pointer,
 				Title:   "",
 				BoardID: 20,
 			},
@@ -71,12 +73,12 @@ func TestListToDTO(t *testing.T) {
 		{
 			name: "zero board id",
 			list: model.List{
-				ID:      1,
+				ID:      pointer,
 				Title:   "In Progress",
 				BoardID: 0,
 			},
 			want: ListDTO{
-				ID:      &ptr,
+				ID:      &pointer,
 				Title:   "In Progress",
 				BoardID: 0,
 			},
@@ -86,17 +88,16 @@ func TestListToDTO(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ListToDTO(tt.list)
-
-			if got.ID == nil || *got.ID != *tt.want.ID ||
-				got.Title != tt.want.Title ||
-				got.BoardID != tt.want.BoardID {
-				t.Errorf("ListToDTO() = %+v, want %+v", got, tt.want)
-			}
+			require.NotNil(t, got.ID)
+			require.NotNil(t, tt.want.ID)
+			require.Equal(t, *tt.want.ID, *got.ID)
+			require.Equal(t, tt.want.Title, got.Title)
+			require.Equal(t, tt.want.BoardID, got.BoardID)
 		})
 	}
 }
 func TestCardToDTO(t *testing.T) {
-	ptr := 1
+	pointer := 1
 	tests := []struct {
 		name string
 		card model.Card
@@ -105,13 +106,13 @@ func TestCardToDTO(t *testing.T) {
 		{
 			name: "basic conversion",
 			card: model.Card{
-				ID:          1,
+				ID:          pointer,
 				Title:       "Fix bug",
 				Description: "Null pointer exception",
 				ListID:      2,
 			},
 			want: CardDTO{
-				ID:          &ptr,
+				ID:          &pointer,
 				Title:       "Fix bug",
 				Description: "Null pointer exception",
 				ListID:      2,
@@ -122,18 +123,11 @@ func TestCardToDTO(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := CardToDTO(tt.card)
-			if got.ID == nil && tt.want.ID != nil {
-				t.Errorf("CardToDTO() ID = nil, want %v", *tt.want.ID)
-				return
-			}
-			if got.ID != nil && tt.want.ID == nil {
-				t.Errorf("CardToDTO() ID = %v, want nil", *got.ID)
-				return
-			}
-			if got.ID != nil && tt.want.ID != nil && *got.ID != *tt.want.ID {
-				t.Errorf("CardToDTO() ID = %v, want %v", *got.ID, *tt.want.ID)
-			}
-
+			require.NotNil(t, got.ID)
+			require.NotNil(t, tt.want.ID)
+			require.Equal(t, *tt.want.ID, *got.ID)
+			require.Equal(t, tt.want.Title, got.Title)
+			require.Equal(t, tt.want.BoardID, got.BoardID)
 			if got.Title != tt.want.Title {
 				t.Errorf("CardToDTO() Title = %v, want %v", got.Title, tt.want.Title)
 			}

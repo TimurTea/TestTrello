@@ -23,6 +23,6 @@ func (s *ListStorage) GetLists(boardID *int) ([]model.List, error) {
 func (s *ListStorage) CreateList(input model.ListInputCreate) (model.List, error) {
 	var list model.List
 	query := `INSERT INTO lists (title, board_id) VALUES ($1, $2) RETURNING id, title, board_id`
-	err := s.DB.Get(&list, query, input.Title, input.ListID)
+	err := s.DB.Get(&list, query, input.Title, input.BoardID)
 	return list, err
 }

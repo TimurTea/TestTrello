@@ -61,8 +61,8 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 		}
 
 		list, err := h.service.CreateList(model.ListInputCreate{
-			ListID: input.BoardID,
-			Title:  input.Title,
+			BoardID: input.BoardID,
+			Title:   input.Title,
 		})
 		if err != nil {
 			h.logger.Error("Ошибка создания листов", zap.Error(err), zap.Any("input", input))
