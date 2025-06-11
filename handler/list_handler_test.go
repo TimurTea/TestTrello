@@ -2,6 +2,7 @@ package handler
 
 import (
 	"awesomeProject2/cmd/dto"
+	"awesomeProject2/cmd/helper"
 	"awesomeProject2/cmd/model"
 	"bytes"
 	"encoding/json"
@@ -14,34 +15,33 @@ import (
 )
 
 func TestHandleLists_GET(t *testing.T) {
-	id := 1
 	tests := []struct {
-		name           string
-		requestBody    dto.ListDTO
-		mockReturn     []model.List
-		mockError      error
-		expectedStatus int
+		name            string
+		requestBody     dto.ListDTO
+		serviceResponse []model.List
+		mockError       error
+		expectedStatus  int
 	}{
 		{
-			name:           "success with cards",
-			requestBody:    dto.ListDTO{ID: &id},
-			mockReturn:     []model.List{{ID: 1, Title: "Card1"}, {ID: 2, Title: "Card2"}},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success with cards",
+			requestBody:     dto.ListDTO{ID: helper.GetPointer(1)},
+			serviceResponse: []model.List{{ID: 1, Title: "Card1"}, {ID: 2, Title: "Card2"}},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "empty cards list",
-			requestBody:    dto.ListDTO{ID: &id},
-			mockReturn:     []model.List{},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "empty cards list",
+			requestBody:     dto.ListDTO{ID: helper.GetPointer(1)},
+			serviceResponse: []model.List{},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "service error",
-			requestBody:    dto.ListDTO{ID: &id},
-			mockReturn:     nil,
-			mockError:      errors.New("fail"),
-			expectedStatus: http.StatusInternalServerError,
+			name:            "service error",
+			requestBody:     dto.ListDTO{ID: helper.GetPointer(1)},
+			serviceResponse: nil,
+			mockError:       errors.New("fail"),
+			expectedStatus:  http.StatusInternalServerError,
 		},
 	}
 
@@ -55,7 +55,7 @@ func TestHandleLists_GET(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/lists", bytes.NewReader(body))
 			rec := httptest.NewRecorder()
 
-			mock.On("GetLists", tt.requestBody.ID).Return(tt.mockReturn, tt.mockError)
+			mock.On("GetLists", tt.requestBody.ID).Return(tt.serviceResponse, tt.mockError)
 
 			handler.HandleLists(rec, req)
 
@@ -65,8 +65,8 @@ func TestHandleLists_GET(t *testing.T) {
 				var resp []dto.ListDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, len(tt.mockReturn), len(resp))
-				for i, list := range tt.mockReturn {
+				require.Equal(t, len(tt.serviceResponse), len(resp))
+				for i, list := range tt.serviceResponse {
 					require.Equal(t, list.ID, *resp[i].ID)
 					require.Equal(t, list.Title, resp[i].Title)
 				}
@@ -78,50 +78,50 @@ func TestHandleLists_POST(t *testing.T) {
 	tests := []struct {
 		name            string
 		requestBody     dto.CreateListDTO
-		mockReturn      model.List
+		serviceResponse model.List
 		mockError       error
 		expectedStatus  int
 		rawBody         string
 		expectEncodeErr bool
 	}{
 		{
-			name:           "success",
-			requestBody:    dto.CreateListDTO{Title: "New List"},
-			mockReturn:     model.List{ID: 1, Title: "New List"},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success",
+			requestBody:     dto.CreateListDTO{Title: "New List"},
+			serviceResponse: model.List{ID: 1, Title: "New List"},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "empty title",
-			requestBody:    dto.CreateListDTO{Title: ""},
-			mockReturn:     model.List{},
-			mockError:      nil,
-			expectedStatus: http.StatusBadRequest,
+			name:            "empty title",
+			requestBody:     dto.CreateListDTO{Title: ""},
+			serviceResponse: model.List{},
+			mockError:       nil,
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
-			name:           "service error",
-			requestBody:    dto.CreateListDTO{Title: "Boom"},
-			mockReturn:     model.List{},
-			mockError:      errors.New("service error"),
-			expectedStatus: http.StatusInternalServerError,
+			name:            "service error",
+			requestBody:     dto.CreateListDTO{Title: "Boom"},
+			serviceResponse: model.List{},
+			mockError:       errors.New("service error"),
+			expectedStatus:  http.StatusInternalServerError,
 		},
 		{
-			name:           "invalid json",
-			requestBody:    dto.CreateListDTO{},
-			mockReturn:     model.List{},
-			mockError:      nil,
-			expectedStatus: http.StatusBadRequest,
+			name:            "invalid json",
+			requestBody:     dto.CreateListDTO{},
+			serviceResponse: model.List{},
+			mockError:       nil,
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
-			name:           "error decode",
-			rawBody:        `{"title":123}`,
-			mockReturn:     model.List{ID: 123, Title: "EncodeFail"},
-			expectedStatus: http.StatusBadRequest,
+			name:            "error decode",
+			rawBody:         `{"title":123}`,
+			serviceResponse: model.List{ID: 123, Title: "EncodeFail"},
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
 			name:            "error from encode",
 			requestBody:     dto.CreateListDTO{Title: "EncodeFail"},
-			mockReturn:      model.List{ID: 123, Title: "EncodeFail"},
+			serviceResponse: model.List{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusInternalServerError,
 			expectEncodeErr: true,
 		},
@@ -150,7 +150,7 @@ func TestHandleLists_POST(t *testing.T) {
 
 			if tt.requestBody.Title != "" {
 				input := model.ListInputCreate{Title: tt.requestBody.Title}
-				mockService.On("CreateList", input).Return(tt.mockReturn, tt.mockError)
+				mockService.On("CreateList", input).Return(tt.serviceResponse, tt.mockError)
 			}
 
 			handler.HandleLists(rw, req)
@@ -158,11 +158,12 @@ func TestHandleLists_POST(t *testing.T) {
 			require.Equal(t, tt.expectedStatus, rec.Code)
 
 			if tt.expectedStatus == http.StatusOK && !tt.expectEncodeErr {
-				var response dto.ListDTO
-				err := json.NewDecoder(rec.Body).Decode(&response)
+				var resp dto.ListDTO
+				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, tt.mockReturn.ID, *response.ID)
-				require.Equal(t, tt.mockReturn.Title, response.Title)
+
+				expected := dto.ListToDTO(tt.serviceResponse)
+				require.Equal(t, expected, resp)
 			}
 		})
 	}

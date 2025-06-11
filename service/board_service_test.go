@@ -39,7 +39,7 @@ func TestCreateBoard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockBoardStorage)
+			mockStorage := new(MockBoardService)
 			logger := zap.NewNop()
 			service := NewBoardService(mockStorage, logger)
 			mockStorage.On("CreateBoard", tt.inputTitle).Return(tt.mockResult, tt.mockError)
@@ -79,7 +79,7 @@ func TestGetBoard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockBoardStorage)
+			mockStorage := new(MockBoardService)
 			logger := zap.NewNop()
 			boardService := NewBoardService(mockStorage, logger)
 			mockStorage.On("GetBoards").Return(tt.mockResult, tt.mockError)

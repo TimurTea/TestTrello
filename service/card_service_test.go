@@ -38,7 +38,7 @@ func TestCreateCard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockCardStorage)
+			mockStorage := new(MockCardService)
 			svc := CardService{Storage: mockStorage}
 
 			input := model.CardInputCreate{
@@ -89,7 +89,7 @@ func TestGetCard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockCardStorage)
+			mockStorage := new(MockCardService)
 			logger := zap.NewNop()
 			cardService := NewCardService(mockStorage, logger)
 			listID := tt.listID
@@ -130,7 +130,7 @@ func TestDeleteCard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockCardStorage)
+			mockStorage := new(MockCardService)
 			service := CardService{Storage: mockStorage}
 			mockStorage.On("DeleteCard", tt.listID, tt.cardID).Return(model.Card{}, tt.mockError)
 			_, err := service.DeleteCard(tt.cardID, tt.listID)
@@ -177,7 +177,7 @@ func TestUpdateCard(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockCardStorage)
+			mockStorage := new(MockCardService)
 			service := CardService{Storage: mockStorage}
 			mockStorage.On("UpdateCard", tt.updated).Return(tt.mockReturn, tt.mockError)
 			result, err := service.UpdateCard(tt.updated)

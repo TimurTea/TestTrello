@@ -16,7 +16,3 @@ type CardService interface {
 	DeleteCard(listID int, cardID int) (model.Card, error)
 	UpdateCard(updated model.Card) (model.Card, error)
 }
-type SQLExecutor interface {
-	Get(dest interface{}, query string, args ...interface{}) error
-	Select(dest interface{}, query string, args ...interface{}) error
-}

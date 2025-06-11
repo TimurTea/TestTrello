@@ -37,12 +37,12 @@ func TestCreateList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockListStorage)
+			mockStorage := new(MockListService)
 			svc := ListService{Storage: mockStorage}
 
 			input := model.ListInputCreate{
-				Title:  tt.title,
-				ListID: tt.boardID,
+				Title:   tt.title,
+				BoardID: tt.boardID,
 			}
 
 			mockStorage.On("CreateList", input).Return(tt.mockReturn, tt.mockError)
@@ -88,7 +88,7 @@ func TestGetList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.title, func(t *testing.T) {
-			mockStorage := new(MockListStorage)
+			mockStorage := new(MockListService)
 			logger := zap.NewNop()
 			listService := NewListService(mockStorage, logger)
 			boardID := tt.boardID

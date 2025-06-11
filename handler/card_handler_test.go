@@ -2,6 +2,7 @@ package handler
 
 import (
 	"awesomeProject2/cmd/dto"
+	"awesomeProject2/cmd/helper"
 	"awesomeProject2/cmd/model"
 	"bytes"
 	"encoding/json"
@@ -14,34 +15,33 @@ import (
 )
 
 func TestHandleCards_GET(t *testing.T) {
-	id := 1
 	tests := []struct {
-		name           string
-		requestBody    dto.CardDTO
-		mockReturn     []model.Card
-		mockError      error
-		expectedStatus int
+		name            string
+		requestBody     dto.CardDTO
+		serviceResponse []model.Card
+		mockError       error
+		expectedStatus  int
 	}{
 		{
-			name:           "success with cards",
-			requestBody:    dto.CardDTO{ID: &id},
-			mockReturn:     []model.Card{{ID: 1, Title: "Card1"}, {ID: 2, Title: "Card2"}},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success with cards",
+			requestBody:     dto.CardDTO{ID: helper.GetPointer(1)},
+			serviceResponse: []model.Card{{ID: 1, Title: "Card1"}, {ID: 2, Title: "Card2"}},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "empty cards list",
-			requestBody:    dto.CardDTO{ID: &id},
-			mockReturn:     []model.Card{},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "empty cards list",
+			requestBody:     dto.CardDTO{ID: helper.GetPointer(1)},
+			serviceResponse: []model.Card{},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "service error",
-			requestBody:    dto.CardDTO{ID: &id},
-			mockReturn:     nil,
-			mockError:      errors.New("fail"),
-			expectedStatus: http.StatusInternalServerError,
+			name:            "service error",
+			requestBody:     dto.CardDTO{ID: helper.GetPointer(1)},
+			serviceResponse: nil,
+			mockError:       errors.New("fail"),
+			expectedStatus:  http.StatusInternalServerError,
 		},
 	}
 
@@ -55,7 +55,7 @@ func TestHandleCards_GET(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/cards", bytes.NewReader(body))
 			rec := httptest.NewRecorder()
 
-			mock.On("GetCards", tt.requestBody.ID).Return(tt.mockReturn, tt.mockError)
+			mock.On("GetCards", tt.requestBody.ID).Return(tt.serviceResponse, tt.mockError)
 
 			handler.HandleCards(rec, req)
 
@@ -65,8 +65,8 @@ func TestHandleCards_GET(t *testing.T) {
 				var resp []dto.CardDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, len(tt.mockReturn), len(resp))
-				for i, card := range tt.mockReturn {
+				require.Equal(t, len(tt.serviceResponse), len(resp))
+				for i, card := range tt.serviceResponse {
 					require.Equal(t, card.ID, *resp[i].ID)
 					require.Equal(t, card.Title, resp[i].Title)
 				}
@@ -78,18 +78,18 @@ func TestHandleCards_POST(t *testing.T) {
 	tests := []struct {
 		name            string
 		requestBody     dto.CreateCardDTO
-		mockReturn      model.Card
+		serviceResponse model.Card
 		mockError       error
 		expectedStatus  int
 		rawBody         string
 		expectEncodeErr bool
 	}{
 		{
-			name:           "success",
-			requestBody:    dto.CreateCardDTO{ListID: 1, Title: "New Card", Description: "desc"},
-			mockReturn:     model.Card{ID: 1, ListID: 1, Title: "New Card", Description: "desc"},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success",
+			requestBody:     dto.CreateCardDTO{ListID: 1, Title: "New Card", Description: "desc"},
+			serviceResponse: model.Card{ID: 1, ListID: 1, Title: "New Card", Description: "desc"},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
 			name:           "missing list id",
@@ -102,22 +102,22 @@ func TestHandleCards_POST(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "service error",
-			requestBody:    dto.CreateCardDTO{ListID: 1, Title: "Fail Card"},
-			mockReturn:     model.Card{},
-			mockError:      errors.New("fail"),
-			expectedStatus: http.StatusBadRequest,
+			name:            "service error",
+			requestBody:     dto.CreateCardDTO{ListID: 1, Title: "Fail Card"},
+			serviceResponse: model.Card{},
+			mockError:       errors.New("fail"),
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
-			name:           "error decode",
-			rawBody:        `{"title":123}`,
-			mockReturn:     model.Card{ID: 123, Title: "EncodeFail"},
-			expectedStatus: http.StatusBadRequest,
+			name:            "error decode",
+			rawBody:         `{"title":123}`,
+			serviceResponse: model.Card{ID: 123, Title: "EncodeFail"},
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
 			name:            "error from encode",
 			requestBody:     dto.CreateCardDTO{Title: "EncodeFail"},
-			mockReturn:      model.Card{ID: 123, Title: "EncodeFail"},
+			serviceResponse: model.Card{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusBadRequest,
 			expectEncodeErr: true,
 		},
@@ -150,19 +150,19 @@ func TestHandleCards_POST(t *testing.T) {
 					ListID:      tt.requestBody.ListID,
 					Title:       tt.requestBody.Title,
 					Description: tt.requestBody.Description,
-				}).Return(tt.mockReturn, tt.mockError)
+				}).Return(tt.serviceResponse, tt.mockError)
 			}
 
 			handler.HandleCards(rw, req)
 
 			require.Equal(t, tt.expectedStatus, rec.Code)
-
 			if tt.expectedStatus == http.StatusOK && !tt.expectEncodeErr {
 				var resp dto.CardDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, tt.mockReturn.ID, *resp.ID)
-				require.Equal(t, tt.mockReturn.Title, resp.Title)
+
+				expected := dto.CardToDTO(tt.serviceResponse)
+				require.Equal(t, expected, resp)
 			}
 		})
 	}
@@ -170,18 +170,18 @@ func TestHandleCards_POST(t *testing.T) {
 
 func TestHandleCards_DELETE(t *testing.T) {
 	tests := []struct {
-		name           string
-		requestBody    dto.DeleteCardDTO
-		mockReturn     model.Card
-		mockError      error
-		expectedStatus int
+		name            string
+		requestBody     dto.DeleteCardDTO
+		serviceResponse model.Card
+		mockError       error
+		expectedStatus  int
 	}{
 		{
-			name:           "success",
-			requestBody:    dto.DeleteCardDTO{CardID: 1, ListID: 2},
-			mockReturn:     model.Card{ID: 1, Title: "Deleted Card"},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success",
+			requestBody:     dto.DeleteCardDTO{CardID: 1, ListID: 2},
+			serviceResponse: model.Card{ID: 1, Title: "Deleted Card"},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
 			name:           "missing list id",
@@ -213,7 +213,7 @@ func TestHandleCards_DELETE(t *testing.T) {
 
 			if tt.requestBody.CardID != 0 && tt.requestBody.ListID != 0 {
 				mock.On("DeleteCard", tt.requestBody.ListID, tt.requestBody.CardID).
-					Return(tt.mockReturn, tt.mockError)
+					Return(tt.serviceResponse, tt.mockError)
 			}
 
 			handler.HandleCards(rec, req)
@@ -224,19 +224,19 @@ func TestHandleCards_DELETE(t *testing.T) {
 				var resp dto.CardDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, tt.mockReturn.ID, *resp.ID)
-				require.Equal(t, tt.mockReturn.Title, resp.Title)
+				require.Equal(t, tt.serviceResponse.ID, *resp.ID)
+				require.Equal(t, tt.serviceResponse.Title, resp.Title)
 			}
 		})
 	}
 }
 func TestHandleCards_PUT(t *testing.T) {
 	tests := []struct {
-		name           string
-		requestBody    dto.UpdateCardDTO
-		mockReturn     model.Card
-		mockError      error
-		expectedStatus int
+		name            string
+		requestBody     dto.UpdateCardDTO
+		serviceResponse model.Card
+		mockError       error
+		expectedStatus  int
 	}{
 		{
 			name: "success",
@@ -246,7 +246,7 @@ func TestHandleCards_PUT(t *testing.T) {
 				Title:       "Updated Card",
 				Description: "Updated Desc",
 			},
-			mockReturn: model.Card{
+			serviceResponse: model.Card{
 				ID:          1,
 				ListID:      2,
 				Title:       "Updated Card",
@@ -299,7 +299,7 @@ func TestHandleCards_PUT(t *testing.T) {
 					ListID:      tt.requestBody.ListID,
 					Title:       tt.requestBody.Title,
 					Description: tt.requestBody.Description,
-				}).Return(tt.mockReturn, tt.mockError)
+				}).Return(tt.serviceResponse, tt.mockError)
 			}
 
 			handler.HandleCards(rec, req)
@@ -310,8 +310,8 @@ func TestHandleCards_PUT(t *testing.T) {
 				var resp dto.CardDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				require.NoError(t, err)
-				require.Equal(t, tt.mockReturn.ID, *resp.ID)
-				require.Equal(t, tt.mockReturn.Title, resp.Title)
+				require.Equal(t, tt.serviceResponse.ID, *resp.ID)
+				require.Equal(t, tt.serviceResponse.Title, resp.Title)
 			}
 		})
 	}

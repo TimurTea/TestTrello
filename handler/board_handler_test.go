@@ -15,15 +15,15 @@ import (
 
 func TestHandleBoards_GET(t *testing.T) {
 	tests := []struct {
-		name           string
-		mockReturn     []model.Board
-		mockError      error
-		expectedStatus int
-		expectedCount  int
+		name            string
+		serviceResponse []model.Board
+		mockError       error
+		expectedStatus  int
+		expectedCount   int
 	}{
 		{
 			name: "success",
-			mockReturn: []model.Board{
+			serviceResponse: []model.Board{
 				{ID: 1, Title: "Board 1"},
 			},
 			mockError:      nil,
@@ -31,11 +31,11 @@ func TestHandleBoards_GET(t *testing.T) {
 			expectedCount:  1,
 		},
 		{
-			name:           "error from service",
-			mockReturn:     nil,
-			mockError:      errors.New("storage error"),
-			expectedStatus: http.StatusInternalServerError,
-			expectedCount:  0,
+			name:            "error from service",
+			serviceResponse: nil,
+			mockError:       errors.New("storage error"),
+			expectedStatus:  http.StatusInternalServerError,
+			expectedCount:   0,
 		},
 	}
 
@@ -45,7 +45,7 @@ func TestHandleBoards_GET(t *testing.T) {
 			logger := zap.NewNop()
 			handler := NewBoardHandler(mockService, logger)
 
-			mockService.On("GetBoards").Return(tt.mockReturn, tt.mockError)
+			mockService.On("GetBoards").Return(tt.serviceResponse, tt.mockError)
 
 			req := httptest.NewRequest(http.MethodGet, "/boards", nil)
 			rec := httptest.NewRecorder()
@@ -53,12 +53,15 @@ func TestHandleBoards_GET(t *testing.T) {
 			handler.HandleBoards(rec, req)
 
 			require.Equal(t, tt.expectedStatus, rec.Code)
-
+			expected := make([]dto.BoardDTO, 0, len(tt.serviceResponse))
+			for _, b := range tt.serviceResponse {
+				expected = append(expected, dto.BoardToDTO(b))
+			}
 			if tt.expectedStatus == http.StatusOK {
 				var response []dto.BoardDTO
 				err := json.NewDecoder(rec.Body).Decode(&response)
 				require.NoError(t, err)
-				require.Len(t, response, tt.expectedCount)
+				require.Equal(t, expected, response)
 			}
 
 			mockService.AssertExpectations(t)
@@ -78,42 +81,42 @@ func TestHandleBoards_POST(t *testing.T) {
 		name            string
 		requestBody     dto.CreateBoardDTO
 		rawBody         string
-		mockReturn      model.Board
+		serviceResponse model.Board
 		mockError       error
 		expectedStatus  int
 		expectEncodeErr bool
 	}{
 		{
-			name:           "success",
-			requestBody:    dto.CreateBoardDTO{Title: "New Board"},
-			mockReturn:     model.Board{ID: 1, Title: "New Board"},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
+			name:            "success",
+			requestBody:     dto.CreateBoardDTO{Title: "New Board"},
+			serviceResponse: model.Board{ID: 1, Title: "New Board"},
+			mockError:       nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
-			name:           "empty title",
-			requestBody:    dto.CreateBoardDTO{Title: ""},
-			mockReturn:     model.Board{},
-			mockError:      nil,
-			expectedStatus: http.StatusBadRequest,
+			name:            "empty title",
+			requestBody:     dto.CreateBoardDTO{Title: ""},
+			serviceResponse: model.Board{},
+			mockError:       nil,
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
-			name:           "service error",
-			requestBody:    dto.CreateBoardDTO{Title: "Boom"},
-			mockReturn:     model.Board{},
-			mockError:      errors.New("service error"),
-			expectedStatus: http.StatusInternalServerError,
+			name:            "service error",
+			requestBody:     dto.CreateBoardDTO{Title: "Boom"},
+			serviceResponse: model.Board{},
+			mockError:       errors.New("service error"),
+			expectedStatus:  http.StatusInternalServerError,
 		},
 		{
-			name:           "error decode",
-			rawBody:        `{"title":123}`,
-			mockReturn:     model.Board{ID: 123, Title: "EncodeFail"},
-			expectedStatus: http.StatusBadRequest,
+			name:            "error decode",
+			rawBody:         `{"title":123}`,
+			serviceResponse: model.Board{ID: 123, Title: "EncodeFail"},
+			expectedStatus:  http.StatusBadRequest,
 		},
 		{
 			name:            "error from encode",
 			requestBody:     dto.CreateBoardDTO{Title: "EncodeFail"},
-			mockReturn:      model.Board{ID: 123, Title: "EncodeFail"},
+			serviceResponse: model.Board{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusBadRequest,
 			expectEncodeErr: true,
 		},
@@ -136,7 +139,7 @@ func TestHandleBoards_POST(t *testing.T) {
 			rec := httptest.NewRecorder()
 
 			if len(tt.requestBody.Title) != 0 && !tt.expectEncodeErr {
-				mockService.On("CreateBoard", tt.requestBody.Title).Return(tt.mockReturn, tt.mockError)
+				mockService.On("CreateBoard", tt.requestBody.Title).Return(tt.serviceResponse, tt.mockError)
 			}
 			if tt.expectEncodeErr {
 				mockService.On("CreateBoard", tt.requestBody.Title).Return(model.Board{}, tt.mockError)
@@ -148,15 +151,16 @@ func TestHandleBoards_POST(t *testing.T) {
 			}
 
 			handler.HandleBoards(rw, req)
-
 			require.Equal(t, tt.expectedStatus, rec.Code)
 
 			if tt.expectedStatus == http.StatusOK && !tt.expectEncodeErr {
 				var response dto.BoardDTO
 				err := json.NewDecoder(rec.Body).Decode(&response)
-				require.NoError(t, err)
-				require.Equal(t, tt.mockReturn.ID, *response.ID)
-				require.Equal(t, tt.mockReturn.Title, response.Title)
+				expected := dto.BoardDTO{
+					ID:    &tt.serviceResponse.ID,
+					Title: tt.serviceResponse.Title,
+				}
+				require.Equal(t, expected, response, err)
 			}
 		})
 	}

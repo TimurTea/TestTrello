@@ -2,7 +2,6 @@ package service
 
 import "awesomeProject2/cmd/model"
 
-//go:generate mockgen -source=interfaces.go -destination=../../mocks/mock_service_deps.go -package=mocks
 type BoardStorage interface {
 	GetBoards() ([]model.Board, error)
 	CreateBoard(title string) (model.Board, error)
