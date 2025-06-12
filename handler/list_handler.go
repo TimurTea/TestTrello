@@ -25,13 +25,13 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		if r.Body != nil {
 			if err := json.NewDecoder(r.Body).Decode(&requestDTO); err != nil {
-				h.logger.Error("Ошибка декодирования запроса(GET)", zap.Error(err))
+				h.logger.Error("Ошибка декодирования запроса(GET)", zap.Error(err), zap.Any("dto", requestDTO))
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			lists, err := h.service.GetLists(requestDTO.ID)
 			if err != nil {
-				h.logger.Error("Ошибка получения листов", zap.Error(err))
+				h.logger.Error("Ошибка получения листов", zap.Error(err), zap.Any("dto", requestDTO))
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -41,7 +41,7 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(listDTOs); err != nil {
-				h.logger.Error("Ошибка кодирования запроса(GET)", zap.Error(err))
+				h.logger.Error("Ошибка кодирования запроса(GET)", zap.Error(err), zap.Any("listDTOs", listDTOs))
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -50,7 +50,7 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		var input dto.CreateListDTO
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			h.logger.Error("Ошибка декодирования запроса(POST)", zap.Error(err))
+			h.logger.Error("Ошибка декодирования запроса(POST)", zap.Error(err), zap.Any("dto", input))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -65,14 +65,14 @@ func (h *ListHandler) HandleLists(w http.ResponseWriter, r *http.Request) {
 			Title:   input.Title,
 		})
 		if err != nil {
-			h.logger.Error("Ошибка создания листов", zap.Error(err))
+			h.logger.Error("Ошибка создания листов", zap.Error(err), zap.Any("input", input))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		dto := dto.ListToDTO(list)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(dto); err != nil {
-			h.logger.Error("Ошибка кодирования запроса(POST)", zap.Error(err))
+			h.logger.Error("Ошибка кодирования запроса(POST)", zap.Error(err), zap.Any("dto", dto))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

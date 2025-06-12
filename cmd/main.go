@@ -33,7 +33,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Не удалось подключиться к БД", zap.Any("env", env))
 	}
-	logger.Info("Приложение успешно стартовало")
 	boardStore := storage.NewBoardStorage(db)
 	listStore := storage.NewListStorage(db)
 	cardStore := storage.NewCardStorage(db)
@@ -46,5 +45,6 @@ func main() {
 	http.HandleFunc("/boards", boardHandler.HandleBoards)
 	http.HandleFunc("/lists", listHandler.HandleLists)
 	http.HandleFunc("/cards", cardHandler.HandleCards)
+	logger.Info("Приложение успешно стартовало")
 	http.ListenAndServe(":8080", nil)
 }

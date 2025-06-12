@@ -6,19 +6,19 @@ import (
 )
 
 type BoardService struct {
-	storage BoardStorage
+	Storage BoardStorage
 	logger  *zap.Logger
 }
 
 func NewBoardService(storage BoardStorage, logger *zap.Logger) *BoardService {
 	return &BoardService{
-		storage: storage,
+		Storage: storage,
 		logger:  logger,
 	}
 }
 func (s BoardService) GetBoards() ([]model.Board, error) {
-	return s.storage.GetBoards()
+	return s.Storage.GetBoards()
 }
 func (s BoardService) CreateBoard(title string) (model.Board, error) {
-	return s.storage.CreateBoard(title)
+	return s.Storage.CreateBoard(title)
 }

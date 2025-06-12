@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"time"
 )
 
 type Storage struct {
@@ -15,23 +14,13 @@ type Storage struct {
 	cardID  int
 }
 
-func NewStorage() *Storage {
-	return &Storage{
-		Boards:  make(map[int]model.Board),
-		boardID: 1,
-		listID:  1,
-		cardID:  1,
-	}
-}
 func (s *Storage) GetBoards() []model.Board {
 	return slices.Collect(maps.Values(s.Boards))
 }
 func (s *Storage) CreateBoard(title string) model.Board {
 	board := model.Board{
-		Title:     title,
-		ID:        s.boardID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Title: title,
+		ID:    s.boardID,
 	}
 	s.Boards[s.boardID] = board
 	s.boardID++
@@ -57,11 +46,9 @@ func (s *Storage) GetLists(listID *int) []model.List {
 }
 func (s *Storage) CreateList(title string, boardID int) model.List {
 	newList := model.List{
-		ID:        s.listID,
-		Title:     title,
-		BoardID:   boardID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:      s.listID,
+		Title:   title,
+		BoardID: boardID,
 	}
 	s.listID++
 	board, ok := s.Boards[boardID]
@@ -94,20 +81,15 @@ func (s *Storage) GetCards(cardID *int) []model.Card {
 	return []model.Card{}
 }
 
-func (s *Storage) CreateCard(title string, boardID int, listID int, description string) model.Card {
+func (s *Storage) CreateCard(title string, boardID int, listID int) model.Card {
 	newCard := model.Card{
-		Title:       title,
-		Description: description,
-		ID:          s.cardID,
-		BoardID:     boardID,
-		ListID:      listID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		Title:   title,
+		ID:      s.cardID,
+		BoardID: boardID,
+		ListID:  listID,
 	}
 	newCard.ID = s.cardID
 	s.cardID++
-	newCard.CreatedAt = time.Now()
-	newCard.UpdatedAt = time.Now()
 	for i := range s.Boards {
 		if s.Boards[i].ID == boardID {
 			for j := range s.Boards[i].Lists {
