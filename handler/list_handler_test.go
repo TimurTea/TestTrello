@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"net/http"
@@ -23,9 +24,9 @@ func TestHandleLists_GET(t *testing.T) {
 		expectedStatus  int
 	}{
 		{
-			name:            "success with cards",
+			name:            "success with lists",
 			requestBody:     dto.ListDTO{ID: helper.GetPointer(1)},
-			serviceResponse: []model.List{{ID: 1, Title: "Card1"}, {ID: 2, Title: "Card2"}},
+			serviceResponse: []model.List{{ID: 1, Title: "List1"}, {ID: 2, Title: "List2"}},
 			mockError:       nil,
 			expectedStatus:  http.StatusOK,
 		},
@@ -47,7 +48,7 @@ func TestHandleLists_GET(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := new(MockListStorage)
+			mock := new(MockListService)
 			logger := zap.NewNop()
 			handler := NewListHandler(mock, logger)
 
@@ -83,34 +84,45 @@ func TestHandleLists_POST(t *testing.T) {
 		expectedStatus  int
 		rawBody         string
 		expectEncodeErr bool
+		setupMock       func(s *MockListService)
 	}{
 		{
 			name:            "success",
-			requestBody:     dto.CreateListDTO{Title: "New List"},
-			serviceResponse: model.List{ID: 1, Title: "New List"},
+			requestBody:     dto.CreateListDTO{BoardID: 1, Title: "New List"},
+			serviceResponse: model.List{ID: 1, BoardID: 1, Title: "New List"},
 			mockError:       nil,
 			expectedStatus:  http.StatusOK,
+			setupMock: func(s *MockListService) {
+				s.On("CreateList", model.ListInputCreate{
+					BoardID: 1,
+					Title:   "New List",
+				}).Return(model.List{ID: 1, BoardID: 1, Title: "New List"}, nil)
+			},
 		},
 		{
-			name:            "empty title",
-			requestBody:     dto.CreateListDTO{Title: ""},
-			serviceResponse: model.List{},
-			mockError:       nil,
-			expectedStatus:  http.StatusBadRequest,
+			name:           "missing list id",
+			requestBody:    dto.CreateListDTO{Title: "New List"},
+			expectedStatus: http.StatusOK,
+			setupMock: func(s *MockListService) {
+				s.On("CreateList", mock.Anything).Return(model.List{}, nil)
+			},
 		},
 		{
-			name:            "service error",
-			requestBody:     dto.CreateListDTO{Title: "Boom"},
-			serviceResponse: model.List{},
-			mockError:       errors.New("service error"),
-			expectedStatus:  http.StatusInternalServerError,
+			name:           "missing title",
+			requestBody:    dto.CreateListDTO{BoardID: 1},
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:            "invalid json",
-			requestBody:     dto.CreateListDTO{},
-			serviceResponse: model.List{},
-			mockError:       nil,
-			expectedStatus:  http.StatusBadRequest,
+			name:           "service error",
+			requestBody:    dto.CreateListDTO{BoardID: 1, Title: "Fail List"},
+			mockError:      errors.New("fail"),
+			expectedStatus: http.StatusInternalServerError,
+			setupMock: func(s *MockListService) {
+				s.On("CreateList", model.ListInputCreate{
+					BoardID: 1,
+					Title:   "Fail List",
+				}).Return(model.List{}, errors.New("fail"))
+			},
 		},
 		{
 			name:            "error decode",
@@ -124,12 +136,15 @@ func TestHandleLists_POST(t *testing.T) {
 			serviceResponse: model.List{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusInternalServerError,
 			expectEncodeErr: true,
+			setupMock: func(s *MockListService) {
+				s.On("CreateList", mock.Anything).Return(model.List{ID: 123, Title: "EncodeFail"}, nil)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := new(MockListStorage)
+			mockService := new(MockListService)
 			logger := zap.NewNop()
 			handler := NewListHandler(mockService, logger)
 
@@ -142,15 +157,14 @@ func TestHandleLists_POST(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			rw := http.ResponseWriter(rec)
+			var rw http.ResponseWriter = rec
 
 			if tt.expectEncodeErr {
-				rw = &badResponseWriter{rec}
+				rw = &badResponseWriter{ResponseWriter: rec}
 			}
 
-			if tt.requestBody.Title != "" {
-				input := model.ListInputCreate{Title: tt.requestBody.Title}
-				mockService.On("CreateList", input).Return(tt.serviceResponse, tt.mockError)
+			if tt.setupMock != nil {
+				tt.setupMock(mockService)
 			}
 
 			handler.HandleLists(rw, req)
@@ -169,7 +183,7 @@ func TestHandleLists_POST(t *testing.T) {
 	}
 }
 func TestHandleLists_MethodNotAllowed(t *testing.T) {
-	mockService := new(MockListStorage)
+	mockService := new(MockListService)
 	logger := zap.NewNop()
 	handler := NewListHandler(mockService, logger)
 

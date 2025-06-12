@@ -41,7 +41,7 @@ func TestHandleBoards_GET(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := new(MockBoardStorage)
+			mockService := new(MockBoardService)
 			logger := zap.NewNop()
 			handler := NewBoardHandler(mockService, logger)
 
@@ -85,6 +85,7 @@ func TestHandleBoards_POST(t *testing.T) {
 		mockError       error
 		expectedStatus  int
 		expectEncodeErr bool
+		setupMock       func(service *MockBoardService)
 	}{
 		{
 			name:            "success",
@@ -92,26 +93,32 @@ func TestHandleBoards_POST(t *testing.T) {
 			serviceResponse: model.Board{ID: 1, Title: "New Board"},
 			mockError:       nil,
 			expectedStatus:  http.StatusOK,
+			setupMock: func(s *MockBoardService) {
+				s.On("CreateBoard", "New Board").
+					Return(model.Board{ID: 1, Title: "New Board"}, nil)
+			},
 		},
 		{
-			name:            "empty title",
-			requestBody:     dto.CreateBoardDTO{Title: ""},
-			serviceResponse: model.Board{},
-			mockError:       nil,
-			expectedStatus:  http.StatusBadRequest,
+			name:           "empty title",
+			requestBody:    dto.CreateBoardDTO{Title: ""},
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(s *MockBoardService) {}, // мок не нужен, но нужен stub
 		},
 		{
-			name:            "service error",
-			requestBody:     dto.CreateBoardDTO{Title: "Boom"},
-			serviceResponse: model.Board{},
-			mockError:       errors.New("service error"),
-			expectedStatus:  http.StatusInternalServerError,
+			name:           "service error",
+			requestBody:    dto.CreateBoardDTO{Title: "Boom"},
+			mockError:      errors.New("service error"),
+			expectedStatus: http.StatusInternalServerError,
+			setupMock: func(s *MockBoardService) {
+				s.On("CreateBoard", "Boom").
+					Return(model.Board{}, errors.New("service error"))
+			},
 		},
 		{
-			name:            "error decode",
-			rawBody:         `{"title":123}`,
-			serviceResponse: model.Board{ID: 123, Title: "EncodeFail"},
-			expectedStatus:  http.StatusBadRequest,
+			name:           "error decode",
+			rawBody:        `{"title":123}`,
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(s *MockBoardService) {},
 		},
 		{
 			name:            "error from encode",
@@ -119,12 +126,26 @@ func TestHandleBoards_POST(t *testing.T) {
 			serviceResponse: model.Board{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusBadRequest,
 			expectEncodeErr: true,
+			setupMock: func(s *MockBoardService) {
+				s.On("CreateBoard", "EncodeFail").
+					Return(model.Board{ID: 123, Title: "EncodeFail"}, nil)
+			},
+		},
+		{
+			name:            "success with setupMock",
+			requestBody:     dto.CreateBoardDTO{Title: "Test Board"},
+			serviceResponse: model.Board{ID: 1, Title: "Test Board"},
+			expectedStatus:  http.StatusOK,
+			setupMock: func(s *MockBoardService) {
+				s.On("CreateBoard", "Test Board").
+					Return(model.Board{ID: 1, Title: "Test Board"}, nil)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := new(MockBoardStorage)
+			mockService := new(MockBoardService)
 			logger := zap.NewNop()
 			handler := NewBoardHandler(mockService, logger)
 
@@ -138,12 +159,7 @@ func TestHandleBoards_POST(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/boards", bytes.NewReader(body))
 			rec := httptest.NewRecorder()
 
-			if len(tt.requestBody.Title) != 0 && !tt.expectEncodeErr {
-				mockService.On("CreateBoard", tt.requestBody.Title).Return(tt.serviceResponse, tt.mockError)
-			}
-			if tt.expectEncodeErr {
-				mockService.On("CreateBoard", tt.requestBody.Title).Return(model.Board{}, tt.mockError)
-			}
+			tt.setupMock(mockService)
 
 			rw := http.ResponseWriter(rec)
 			if tt.expectEncodeErr {
@@ -160,13 +176,14 @@ func TestHandleBoards_POST(t *testing.T) {
 					ID:    &tt.serviceResponse.ID,
 					Title: tt.serviceResponse.Title,
 				}
-				require.Equal(t, expected, response, err)
+				require.NoError(t, err)
+				require.Equal(t, expected, response)
 			}
 		})
 	}
 }
 func TestHandleBoards_MethodNotAllowed(t *testing.T) {
-	mockService := new(MockBoardStorage)
+	mockService := new(MockBoardService)
 	logger := zap.NewNop()
 	handler := NewBoardHandler(mockService, logger)
 

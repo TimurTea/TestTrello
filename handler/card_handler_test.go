@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"net/http"
@@ -47,7 +48,7 @@ func TestHandleCards_GET(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := new(MockCardStorage)
+			mock := new(MockCardService)
 			logger := zap.NewNop()
 			handler := NewCardHandler(mock, logger)
 
@@ -83,6 +84,7 @@ func TestHandleCards_POST(t *testing.T) {
 		expectedStatus  int
 		rawBody         string
 		expectEncodeErr bool
+		setupMock       func(s *MockCardService)
 	}{
 		{
 			name:            "success",
@@ -90,6 +92,13 @@ func TestHandleCards_POST(t *testing.T) {
 			serviceResponse: model.Card{ID: 1, ListID: 1, Title: "New Card", Description: "desc"},
 			mockError:       nil,
 			expectedStatus:  http.StatusOK,
+			setupMock: func(s *MockCardService) {
+				s.On("CreateCard", model.CardInputCreate{
+					ListID:      1,
+					Title:       "New Card",
+					Description: "desc",
+				}).Return(model.Card{ID: 1, ListID: 1, Title: "New Card", Description: "desc"}, nil)
+			},
 		},
 		{
 			name:           "missing list id",
@@ -102,11 +111,16 @@ func TestHandleCards_POST(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:            "service error",
-			requestBody:     dto.CreateCardDTO{ListID: 1, Title: "Fail Card"},
-			serviceResponse: model.Card{},
-			mockError:       errors.New("fail"),
-			expectedStatus:  http.StatusBadRequest,
+			name:           "service error",
+			requestBody:    dto.CreateCardDTO{ListID: 1, Title: "Fail Card"},
+			mockError:      errors.New("fail"),
+			expectedStatus: http.StatusBadRequest,
+			setupMock: func(s *MockCardService) {
+				s.On("CreateCard", model.CardInputCreate{
+					ListID: 1,
+					Title:  "Fail Card",
+				}).Return(model.Card{}, errors.New("fail"))
+			},
 		},
 		{
 			name:            "error decode",
@@ -120,14 +134,17 @@ func TestHandleCards_POST(t *testing.T) {
 			serviceResponse: model.Card{ID: 123, Title: "EncodeFail"},
 			expectedStatus:  http.StatusBadRequest,
 			expectEncodeErr: true,
+			setupMock: func(s *MockCardService) {
+				s.On("CreateCard", mock.Anything).Return(model.Card{ID: 123, Title: "EncodeFail"}, nil)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := new(MockCardStorage)
+			mockService := new(MockCardService)
 			logger := zap.NewNop()
-			handler := NewCardHandler(mock, logger)
+			handler := NewCardHandler(mockService, logger)
 
 			var req *http.Request
 			if tt.rawBody != "" {
@@ -141,21 +158,17 @@ func TestHandleCards_POST(t *testing.T) {
 			var rw http.ResponseWriter = rec
 
 			if tt.expectEncodeErr {
-
 				rw = &badResponseWriter{ResponseWriter: rec}
 			}
 
-			if tt.requestBody.ListID != 0 && len(tt.requestBody.Title) != 0 {
-				mock.On("CreateCard", model.CardInputCreate{
-					ListID:      tt.requestBody.ListID,
-					Title:       tt.requestBody.Title,
-					Description: tt.requestBody.Description,
-				}).Return(tt.serviceResponse, tt.mockError)
+			if tt.setupMock != nil {
+				tt.setupMock(mockService)
 			}
 
 			handler.HandleCards(rw, req)
 
 			require.Equal(t, tt.expectedStatus, rec.Code)
+
 			if tt.expectedStatus == http.StatusOK && !tt.expectEncodeErr {
 				var resp dto.CardDTO
 				err := json.NewDecoder(rec.Body).Decode(&resp)
@@ -167,7 +180,6 @@ func TestHandleCards_POST(t *testing.T) {
 		})
 	}
 }
-
 func TestHandleCards_DELETE(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -203,7 +215,7 @@ func TestHandleCards_DELETE(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := new(MockCardStorage)
+			mock := new(MockCardService)
 			logger := zap.NewNop()
 			handler := NewCardHandler(mock, logger)
 
@@ -285,7 +297,7 @@ func TestHandleCards_PUT(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := new(MockCardStorage)
+			mock := new(MockCardService)
 			logger := zap.NewNop()
 			handler := NewCardHandler(mock, logger)
 
@@ -317,7 +329,7 @@ func TestHandleCards_PUT(t *testing.T) {
 	}
 }
 func TestHandleCard_MethodNotAllowed(t *testing.T) {
-	mockService := new(MockCardStorage)
+	mockService := new(MockCardService)
 	logger := zap.NewNop()
 	handler := NewCardHandler(mockService, logger)
 
